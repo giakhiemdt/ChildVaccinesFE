@@ -151,14 +151,16 @@ const Wallet: React.FC = () => {
     const transactionTabItems = [
         { key: "All", label: "Tất cả" },
         { key: "Nạp tiền", label: "Nạp tiền" },
-        { key: "Transfer", label: "Giao dịch" },
+        { key: "Thanh toán lịch hẹn", label: "Thanh toán" },
+        { key: "Hoàn tiền", label: "Hoàn tiền" },
+
     ];
 
     const refundTabItems = [
         { key: "All", label: "Tất cả" },
         { key: "Đang chờ xử lý", label: "Đang chờ" },
-        { key: "Approved", label: "Đã duyệt" },
-        { key: "Rejected", label: "Từ chối" },
+        { key: "Đã chấp nhận", label: "Đã chấp nhận" },
+        { key: "Bị từ chối", label: "Từ chối" },
     ];
 
     const topupOptions = [10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000, 5000000];

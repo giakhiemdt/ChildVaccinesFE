@@ -14,7 +14,6 @@ import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import {
   BookingDetailResponse,
-  BookingResponse,
 } from "../../interfaces/VaccineRegistration.ts";
 
 const { Option } = Select;
@@ -98,17 +97,17 @@ const VaccinationRecordForm: React.FC<Props> = ({ booking }) => {
         showCompletionConfirmationModal(
           async () => {
             // Xử lý khi người dùng xác nhận tiếp tục
-            for (const record of updatedRecords) {
-              const updateRequest: UpdateVaccineRecordRequest = {
-                notes: record.notes,
-                status: "Completed",
-                nextDoseDate: record.nextDoseDate || "",
-              };
-              await apiUpdateVaccineRecord(
-                Number(record.vaccinationRecordId),
-                updateRequest
-              );
-            }
+            // for (const record of updatedRecords) {
+            //   const updateRequest: UpdateVaccineRecordRequest = {
+            //     notes: record.notes,
+            //     status: "Completed",
+            //     nextDoseDate: record.nextDoseDate || "",
+            //   };
+            //   await apiUpdateVaccineRecord(
+            //     Number(record.vaccinationRecordId),
+            //     updateRequest
+            //   );
+            // }
 
             toast.success("Hồ sơ đã được cập nhật thành công!");
             navigate("/doctor/vaccination-schedule");

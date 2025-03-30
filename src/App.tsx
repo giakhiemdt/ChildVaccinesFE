@@ -134,13 +134,14 @@ function App() {
                 <Route path="/staff/booking" element={<ProtectedRoute allowedRoles={["Staff"]}><BookingForStaff /></ProtectedRoute>} />
                 <Route path="/staff/blogPost" element={<ProtectedRoute allowedRoles={["Staff"]}><StaffBlogPostPage /></ProtectedRoute>} />
                 <Route path="/staff/blogManager" element={<ProtectedRoute allowedRoles={["Staff"]}><StaffBlogManagePage /></ProtectedRoute>} />
-
+                <Route path="/staff/blog/edit/:id" element={<ProtectedRoute allowedRoles={["Staff"]}><StaffBlogPostPage /></ProtectedRoute>} />
                 {/* Doctor Routes */}
                 <Route path="/doctor/vaccination-schedule" element={<ProtectedRoute allowedRoles={["Doctor"]}><VaccinationSchedulePage /></ProtectedRoute>} />
                 <Route path="/doctor/service" element={<ProtectedRoute allowedRoles={["Doctor"]}><ServicePage /></ProtectedRoute>} />
                 <Route path="/doctor/blogPost" element={<ProtectedRoute allowedRoles={["Doctor"]}><DoctorBlogPostPage /></ProtectedRoute>} />
                 <Route path="/doctor/blogManager" element={<ProtectedRoute allowedRoles={["Doctor"]}><DoctorBlogManagePage /></ProtectedRoute>} />
                 <Route path="/doctor/profile" element={<ProtectedRoute allowedRoles={["Doctor"]}><DoctorProfile /></ProtectedRoute>}/>
+                <Route path="/doctor/blog/edit/:id" element={<ProtectedRoute allowedRoles={["Doctor"]}><DoctorBlogPostPage /></ProtectedRoute>} />
                 {/* Manager Routes */}
                 <Route path="/manager/dashboard" element={<ProtectedRoute allowedRoles={["Manager"]}><ManagerDashBoard /></ProtectedRoute>} />
                 <Route path="/manager/vaccines" element={<ProtectedRoute allowedRoles={["Manager"]}><ManagerVaccinePage /></ProtectedRoute>} />

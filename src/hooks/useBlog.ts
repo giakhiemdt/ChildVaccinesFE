@@ -11,7 +11,6 @@ export const useGetAllBlog = () => {
 
     const fetchAllBlog = async (isActive: boolean, blogType: string) => {
         setLoading(true);
-
         try {
             let response;
             if (blogType === "all") {
@@ -19,7 +18,7 @@ export const useGetAllBlog = () => {
             }else if (blogType === "blog") {
                 response = await apiGetAllBlog(isActive);
             }else {
-                response = await apiGetAllNews(isActive);
+                response = await apiGetAllNews();
             }
             if (response && response.result) {
                 if (blogType === "news") {
@@ -47,7 +46,7 @@ export const useBlogByAuthor = (author: string) => {
     const fetchAllBlog = async () => {
         setLoading(true);
         try {
-            const response = await apiGetAll(true);
+            const response = await apiGetAll();
             if (response && response.result) {
                 const filteredBlogs = response.result.filter(
                     (blog: BlogResponse) => blog.authorName === author
@@ -133,6 +132,7 @@ export const useRandomBlogs = () => {
         while (result.size < num && news.length > 0) {
             const randomIndex = Math.floor(Math.random() * news.length);
             result.add(news[randomIndex]);
+            console.log(result)
         }
         return Array.from(result);
     }

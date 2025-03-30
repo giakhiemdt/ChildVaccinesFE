@@ -1,6 +1,5 @@
 export interface Booking {
   childId: number;
-  bookingDate: string;
   notes: string;
   bookingDetails: BookingDetail[];
 }
@@ -10,6 +9,8 @@ export interface BookingDetail {
   comboVaccineId: number | null;
   vaccineName: string | null;
   comboVaccineName: string | null;
+  price: string | null;
+  injectionDate: string | null
 }
 
 export interface BookingUser {
@@ -42,6 +43,7 @@ export interface BookingDetailResponse {
   bookingDetailId: number;
   childName: string;
   bookingDate: string;
+  injectionDate: string;
   bookingType: string;
   price: string;
   note: string;

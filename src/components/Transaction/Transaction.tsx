@@ -9,8 +9,6 @@ import {
   // Thêm API để lấy thông tin booking theo ID
 } from "../../apis/apiVaccine";
 import {
-  Booking,
-  BookingResult,
   Vaccine,
   VaccinePackage,
 } from "../../interfaces/VaccineRegistration.ts";
@@ -22,14 +20,15 @@ import { toast } from "react-toastify";
 
 import { apiGetBookingById } from "../../apis/apiBooking.ts";
 import { AxiosError } from "axios";
+import { BookingDetail, BookingResult } from "../../interfaces/Booking.ts";
 
 const Payment: React.FC = () => {
   const location = useLocation();
   const { bookingResult } = location.state || {};
 
   const [totalPrice, setTotalPrice] = useState(0);
-  const [vaccineDetails, setVaccineDetails] = useState([]);
-  const [comboDetails, setComboDetails] = useState([]);
+  const [vaccineDetails, setVaccineDetails] = useState<Vaccine[] >([]);
+  const [comboDetails, setComboDetails] = useState<VaccinePackage[] >([]);
   const [selectedMethod, setSelectedMethod] = useState<string>("VNPay");
   const [currentBookingResult, setCurrentBookingResult] =
     useState<BookingResult | null>(null);
@@ -50,7 +49,8 @@ const Payment: React.FC = () => {
         isPedingFromHistoryPage && bookingId
           ? Number(bookingId)
           : bookingResult.bookingId;
-
+console.log(bookingID);
+console.log(bookingResult);
       if (method === "VNPay") {
         paymentResponse = await apiPostVNPayTransaction(bookingID);
       } else if (method === "Wallet") {
@@ -78,7 +78,7 @@ const Payment: React.FC = () => {
   };
 
   // Hàm tính tổng tiền
-  const calculateTotalPrice = async (bookingDetails: Booking) => {
+  const calculateTotalPrice = async (bookingDetails: BookingDetail[]) => {
     let total = 0;
 
     for (const detail of bookingDetails) {
@@ -101,31 +101,27 @@ const Payment: React.FC = () => {
   };
 
   // Hàm lấy thông tin vaccine và combo vaccine
-  const getVaccineAndComboDetails = async (bookingDetails: Booking) => {
-    const vaccineDetails = [];
-    const comboDetails = [];
-
+  const getVaccineAndComboDetails = async (bookingDetails: BookingDetail[]) => {
+    const vaccineDetails: Vaccine[] = [];
+    const comboDetails: VaccinePackage[] = [];
+    let comboAdded = false;
+  
     for (const detail of bookingDetails) {
-      if (detail.vaccineId !== null && detail.vaccineId !== undefined) {
+      if (!detail.comboVaccineId && detail.vaccineId) {
         const vaccine = await apiGetVaccineDetailById(detail.vaccineId);
-        if (vaccine && vaccine.result) {
+        if (vaccine?.result) {
           vaccineDetails.push(vaccine.result);
-          console.log(detail);
         }
-      } else if (
-        detail.comboVaccineId !== null &&
-        detail.comboVaccineId !== undefined
-      ) {
-        const comboVaccine = await apiGetComBoVaccineById(
-          detail.comboVaccineId
-        );
-        console.log(comboVaccine);
-        if (comboVaccine && comboVaccine.result) {
+      } 
+      else if (detail.comboVaccineId && !comboAdded) {
+        const comboVaccine = await apiGetComBoVaccineById(detail.comboVaccineId);
+        if (comboVaccine?.result) {
           comboDetails.push(comboVaccine.result);
+          comboAdded = true;
         }
       }
     }
-
+  
     return { vaccineDetails, comboDetails };
   };
 
@@ -161,11 +157,18 @@ const Payment: React.FC = () => {
 
       // Nếu có dữ liệu booking, tiến hành tính giá và lấy thông tin chi tiết
       if (bookingData && bookingData.bookingDetails) {
-        const total = await calculateTotalPrice(bookingData.bookingDetails);
-        setTotalPrice(total);
+        if (bookingData.bookingType === "comboVacinne") {
+          const commboId = bookingData.bookingDetails[0].comboVaccineId;
+          const comboVaccine = await apiGetComBoVaccineById(commboId);
+          setTotalPrice(comboVaccine.result.totalPrice);
+        } else {
+          const total = await calculateTotalPrice(bookingData.bookingDetails);
+          setTotalPrice(total);
+        }
 
         const { vaccineDetails, comboDetails } =
           await getVaccineAndComboDetails(bookingData.bookingDetails);
+        console.log(bookingData.bookingDetails);
         setVaccineDetails(vaccineDetails);
         setComboDetails(comboDetails);
       }
@@ -214,21 +217,20 @@ const Payment: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                  {comboDetails.map((combo: VaccinePackage) => (
+                  {comboDetails.map((combo: any) => (
                     <div key={combo.comboId} className="combo-item">
                       <h4>{combo.comboName}</h4>
-                      {/* <p>Total Price: {combo.totalPrice} VNĐ</p> */}
                       <div className="combo-vaccines">
-                        <h5>Vacxin trong combo:</h5>
-                        {combo.vaccines.map((vaccine) => (
+                        <h5>Vaccine trong combo:</h5>
+                        {combo.vaccines?.map((item: any) => (
                           <div
-                            key={vaccine.vaccine.id}
+                            key={item.vaccine?.id || item.id}
                             className="payment-summary-item"
                           >
-                            <p>{vaccine.vaccine.name}</p>
-                            {vaccine.vaccine.price && (
+                            <p>{item.vaccine?.name || item.vaccineName}</p>
+                            {item.vaccine?.price && (
                               <p className="price">
-                                {vaccine.price.toLocaleString()} vnđ
+                                {item.vaccine.price.toLocaleString()} vnđ
                               </p>
                             )}
                           </div>

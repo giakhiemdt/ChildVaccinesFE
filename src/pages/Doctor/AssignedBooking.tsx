@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { IsLoginSuccessFully } from "../../validations/IsLogginSuccessfully.ts";
 import { apiGetDoctorBookings } from "../../apis/apiBooking.ts";
 import "./VaccinationSchedulePage.scss";
-import { BookingResponse } from "../../interfaces/VaccineRegistration.ts";
 import { useNavigate } from "react-router-dom";
 import DoctorLayout from "../../components/Layout/StaffLayout/DoctorLayout/DoctorLayout.tsx";
 import {
@@ -25,13 +24,14 @@ import {
 } from "../../apis/apiVaccineRecord.ts";
 import { toast } from "react-toastify";
 import {
-  VaccineRecord,
   VaccineRecordResponse,
 } from "../../interfaces/VaccineRecord.ts";
 import moment from "moment";
 import { BookingDetailResponse } from "../../interfaces/Booking.ts";
 
 const { RangePicker } = DatePicker;
+import dayjs, { Dayjs } from "dayjs";
+import { ColumnType } from 'antd/es/table';
 
 const VaccinationSchedulePage: React.FC = () => {
   const { sub: doctorId } = IsLoginSuccessFully();
@@ -41,10 +41,9 @@ const VaccinationSchedulePage: React.FC = () => {
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [searchedColumn, setSearchedColumn] = useState("");
-  const [vaccineDetails, setVaccineDetails] = useState<VaccineRecord[]>([]);
   const [vaccineRecordDetails, setVaccineRecordDetails] =
     useState<VaccineRecordResponse | null>(null);
-  const [filterDate, setFilterDate] = useState<moment.Moment | null>(null);
+  const [filterDate, setFilterDate] = useState<string | null>(null);
   const [filterRange, setFilterRange] = useState<
     [moment.Moment, moment.Moment] | null
   >(null);
@@ -70,13 +69,33 @@ const VaccinationSchedulePage: React.FC = () => {
   }, [doctorId]);
 
   const handleDateChange = (date: moment.Moment | null) => {
-    setFilterDate(date);
+    console.log("Raw date:", date);
+
+    if (!date) {
+            setFilterDate(null); 
+            setFilterRange(null); 
+            setFilterType("custom"); 
+            return;
+    }
+
+    const momentDate = moment(date.toDate()); // Chuyển Day.js thành Date rồi sang Moment
+    setFilterDate(momentDate.format("YYYY-MM-DDTHH:mm:ss.SSSZ"));
     setFilterRange(null);
     setFilterType("custom");
+    console.log(
+      "Converted moment date:",
+      momentDate.format("YYYY-MM-DDTHH:mm:ss.SSSZ")
+    );
   };
 
-  const handleRangeChange = (dates: [moment.Moment, moment.Moment] | null) => {
-    setFilterRange(dates);
+  const handleRangeChange = (
+    dates: [Dayjs | null, Dayjs | null] | null,
+  ) => {
+    if (dates && dates[0] && dates[1]) {
+      setFilterRange([moment(dates[0].toDate()), moment(dates[1].toDate())]); // Chuyển Dayjs -> Moment
+    } else {
+      setFilterRange(null);
+    }
     setFilterDate(null);
     setFilterType("custom");
   };
@@ -92,27 +111,27 @@ const VaccinationSchedulePage: React.FC = () => {
 
     if (filterType === "today") {
       filteredBookings = filteredBookings.filter((booking) =>
-        moment(booking.bookingDate).isSame(moment(), "day")
+        moment(booking.injectionDate).isSame(moment(), "day")
       );
     } else if (filterType === "thisWeek") {
       filteredBookings = filteredBookings.filter((booking) =>
-        moment(booking.bookingDate).isSame(moment(), "week")
+        moment(booking.injectionDate).isSame(moment(), "week")
       );
     } else if (filterType === "thisMonth") {
       filteredBookings = filteredBookings.filter((booking) =>
-        moment(booking.bookingDate).isSame(moment(), "month")
+        moment(booking.injectionDate).isSame(moment(), "month")
       );
     } else if (filterType === "thisYear") {
       filteredBookings = filteredBookings.filter((booking) =>
-        moment(booking.bookingDate).isSame(moment(), "year")
+        moment(booking.injectionDate).isSame(moment(), "year")
       );
     } else if (filterDate) {
       filteredBookings = filteredBookings.filter((booking) =>
-        moment(booking.bookingDate).isSame(filterDate, "day")
+        moment(booking.injectionDate).isSame(filterDate, "day")
       );
     } else if (filterRange) {
       filteredBookings = filteredBookings.filter((booking) =>
-        moment(booking.bookingDate).isBetween(
+        moment(booking.injectionDate).isBetween(
           filterRange[0],
           filterRange[1],
           "day",
@@ -133,7 +152,6 @@ const VaccinationSchedulePage: React.FC = () => {
   );
 
   const openModal = async (booking: BookingDetailResponse) => {
-    setVaccineDetails([]);
     setSelectedBooking(booking);
     setModalIsOpen(true);
 
@@ -144,25 +162,10 @@ const VaccinationSchedulePage: React.FC = () => {
           booking.bookingDetailId
         );
       } catch (error: any) {
-        if (error.response?.status === 400) {
-          const createResponse = await apiCreateVaccineRecord(
-            booking.bookingDetailId
-          );
-          if (createResponse && createResponse?.isSuccess) {
-            existingRecord = await apiGetVaccineRecordByBookingDetailId(
-              booking.bookingDetailId
-            );
-          } else {
-          }
-        } else {
-          throw error;
-        }
       }
 
       if (existingRecord?.isSuccess) {
         setVaccineRecordDetails(existingRecord);
-      } else {
-        setVaccineDetails([]);
       }
     } catch (error) {
       console.error("Error fetching or creating vaccine record:", error);
@@ -171,7 +174,6 @@ const VaccinationSchedulePage: React.FC = () => {
 
   const closeModal = () => {
     setSelectedBooking(null);
-    setVaccineDetails([]);
     setVaccineRecordDetails(null);
     setModalIsOpen(false);
   };
@@ -191,7 +193,74 @@ const VaccinationSchedulePage: React.FC = () => {
     setSearchText("");
   };
 
-  const getColumnSearchProps = (dataIndex: string) => ({
+  // const getColumnSearchProps = (dataIndex: string) => ({
+  //   filterDropdown: ({
+  //     setSelectedKeys,
+  //     selectedKeys,
+  //     confirm,
+  //     clearFilters,
+  //   }: FilterDropdownProps) => (
+  //     <div style={{ padding: 8 }}>
+  //       <Input
+  //         ref={searchInput}
+  //         placeholder={`Search ${dataIndex}`}
+  //         value={selectedKeys[0]}
+  //         onChange={(e) =>
+  //           setSelectedKeys(e.target.value ? [e.target.value] : [])
+  //         }
+  //         onPressEnter={() =>
+  //           handleSearch(selectedKeys as string[], confirm, dataIndex)
+  //         }
+  //         style={{ marginBottom: 8, display: "block" }}
+  //       />
+  //       <Space>
+  //         <Button
+  //           type="primary"
+  //           onClick={() =>
+  //             handleSearch(selectedKeys as string[], confirm, dataIndex)
+  //           }
+  //           icon={<SearchOutlined />}
+  //           size="small"
+  //           style={{ width: 90 }}
+  //         >
+  //           Search
+  //         </Button>
+  //         <Button
+  //           onClick={() => clearFilters && handleReset(clearFilters)}
+  //           size="small"
+  //           style={{ width: 90 }}
+  //         >
+  //           Reset
+  //         </Button>
+  //       </Space>
+  //     </div>
+  //   ),
+  //   filterIcon: (filtered: boolean) => (
+  //     <SearchOutlined style={{ color: filtered ? "#1890ff" : undefined }} />
+  //   ),
+  //   onFilter: (value: string | number | boolean, record: BookingResponse) => {
+  //     const recordValue = record[dataIndex as keyof BookingResponse];
+  //     return recordValue
+  //       ? recordValue
+  //           .toString()
+  //           .toLowerCase()
+  //           .includes(value.toString().toLowerCase())
+  //       : false;
+  //   },
+  //   render: (text: string) =>
+  //     searchedColumn === dataIndex ? (
+  //       <Highlighter
+  //         highlightStyle={{ backgroundColor: "#ffc069", padding: 0 }}
+  //         searchWords={[searchText]}
+  //         autoEscape
+  //         textToHighlight={text ? text.toString() : ""}
+  //       />
+  //     ) : (
+  //       text
+  //     ),
+  // });
+
+  const getColumnSearchProps = (dataIndex: keyof BookingDetailResponse) => ({
     filterDropdown: ({
       setSelectedKeys,
       selectedKeys,
@@ -236,13 +305,13 @@ const VaccinationSchedulePage: React.FC = () => {
     filterIcon: (filtered: boolean) => (
       <SearchOutlined style={{ color: filtered ? "#1890ff" : undefined }} />
     ),
-    onFilter: (value: string | number | boolean, record: BookingResponse) => {
-      const recordValue = record[dataIndex as keyof BookingResponse];
+    onFilter: (value: React.Key | boolean, record: BookingDetailResponse) => {
+      const recordValue = record[dataIndex];
       return recordValue
         ? recordValue
             .toString()
             .toLowerCase()
-            .includes(value.toString().toLowerCase())
+            .includes((value as string).toLowerCase())
         : false;
     },
     render: (text: string) =>
@@ -294,7 +363,7 @@ const VaccinationSchedulePage: React.FC = () => {
     }
   };
 
-  const columns = [
+  const columns: ColumnType<BookingDetailResponse>[] = [
     {
       title: "Mã đơn",
       dataIndex: "bookingDetailId",
@@ -304,12 +373,76 @@ const VaccinationSchedulePage: React.FC = () => {
         Number(a.bookingDetailId) - Number(b.bookingDetailId),
     },
     {
-      title: "Ngày Đặt",
-      dataIndex: "bookingDate",
-      key: "bookingDate",
-      render: (date: string) => new Date(date).toLocaleDateString(),
+      title: "Ngày Tiêm",
+      dataIndex: "injectionDate",
+      key: "injectionDate",
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
       sorter: (a: BookingDetailResponse, b: BookingDetailResponse) =>
-        new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime(),
+        dayjs(a.injectionDate).valueOf() - dayjs(b.injectionDate).valueOf(),
+  
+      filterDropdown: ({
+        setSelectedKeys,
+        selectedKeys,
+        confirm,
+        clearFilters,
+      }: FilterDropdownProps) => (
+        <div style={{ padding: 8 }}>
+          <RangePicker
+            format="DD/MM/YYYY"
+            value={
+              selectedKeys.length === 2
+                ? [
+                    dayjs(selectedKeys[0] as string),
+                    dayjs(selectedKeys[1] as string),
+                  ]
+                : null
+            }
+            onChange={(dates: [Dayjs | null, Dayjs | null] | null) => {
+              if (dates && dates[0] && dates[1]) {
+                setSelectedKeys([
+                  dates[0].toISOString(),
+                  dates[1].toISOString(),
+                ]);
+              } else {
+                setSelectedKeys([]);
+              }
+              confirm({ closeDropdown: false });
+            }}
+            style={{ marginBottom: 8, display: "block" }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              icon={<SearchOutlined />}
+              size="small"
+            >
+              Lọc
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters?.();
+                setSelectedKeys([]);
+                confirm();
+              }}
+              size="small"
+            >
+              Đặt lại
+            </Button>
+          </Space>
+        </div>
+      ),
+      onFilter: (value: any, record: BookingDetailResponse) => {
+        if (!value || value.length !== 2) return true;
+  
+        const [startDate, endDate] = value as [string, string];
+        const bookingDate = dayjs(record.bookingDate).toISOString();
+  
+        return (
+          bookingDate >= dayjs(startDate).toISOString() &&
+          bookingDate <= dayjs(endDate).toISOString()
+        );
+      },
     },
     {
       title: "Giá Tiền",
@@ -351,9 +484,11 @@ const VaccinationSchedulePage: React.FC = () => {
       key: "action",
       render: (_: undefined, record: BookingDetailResponse) => (
         <Space size="middle">
-          <Button type="primary" onClick={() => openModal(record)}>
-            Chi tiết
-          </Button>
+          {record.status === "Hoàn thành" && (
+            <Button type="primary" onClick={() => openModal(record)}>
+              Chi tiết
+            </Button>
+          )}
           {record.status === "Chưa hoàn thành" && (
             <Button
               type="primary"
@@ -399,11 +534,14 @@ const VaccinationSchedulePage: React.FC = () => {
         {filterType === "custom" && (
           <div style={{ marginTop: 16 }}>
             <DatePicker
-              value={filterDate}
               onChange={handleDateChange}
               style={{ marginRight: 8 }}
+              placeholder="Chọn ngày"
             />
-            <RangePicker value={filterRange} onChange={handleRangeChange} />
+            <RangePicker
+              onChange={handleRangeChange}
+              placeholder={["Từ ngày", "Đến ngày"]}
+            />
           </div>
         )}
       </div>
